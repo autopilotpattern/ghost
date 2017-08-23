@@ -1,0 +1,67 @@
+{
+  consul: '{{ if .CONSUL_AGENT }}localhost{{ else }}{{ .CONSUL | default "consul" }}{{ end }}:8500',
+  logging: {
+    level: '{{ .LOG_LEVEL | default "INFO" }}'
+  },
+  jobs: [
+    {
+      name: 'preStart',
+      exec: 'node /bin/config-ghost.js preStart',
+      when: {
+        source: 'watch.mysql-primary',
+        each: 'changed'
+      }
+    },
+    {
+      name: 'ghost',
+      port: 2368,
+      exec: ['docker-entrypoint.sh', 'node', 'current/index.js'],
+      health: {
+        exec: 'pgrep -f current/index.js',
+        interval: 10,
+        ttl: 25
+      },
+      when: {
+        source: 'preStart',
+        once: 'exitSuccess'
+      },
+      restarts: 'unlimited'
+    },{{ if .CONSUL_AGENT }}
+    {
+      name: 'consul-agent',
+      exec: ['/usr/local/bin/consul', 'agent',
+                  '-data-dir=/data',
+                  '-config-dir=/config',
+                  '-log-level=err',
+                  '-rejoin',
+                  '-retry-join', '{{ .CONSUL | default "consul" }}',
+                  '-retry-max', '10',
+                  '-retry-interval', '10s'],
+      health: {
+        exec: 'curl -so /dev/null http://localhost:8500',
+        interval: 10,
+        ttl: 25
+      },
+      restarts: 'unlimited'
+    },
+    {{ end }}
+    {
+      name: 'ghost-onchange',
+      exec: 'node /bin/config-ghost.js onChange',
+      when: {
+        source: 'watch.ghost',
+        once: 'changed'
+      }
+    }
+  ],
+  watches: [
+    {
+      name: 'ghost',
+      interval: 5
+    },
+    {
+      name: "mysql-primary",
+      interval: 5
+    }
+  ]
+}

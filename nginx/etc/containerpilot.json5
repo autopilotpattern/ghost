@@ -1,0 +1,121 @@
+{
+  consul: '{{ if .CONSUL_AGENT }}localhost{{ else }}{{ .CONSUL | default "consul" }}{{ end }}:8500',
+  logging: {
+    level: '{{ .LOG_LEVEL | default "INFO" }}'
+  },
+  jobs: [
+    {
+      name: 'preStart',
+      exec: 'generate-config'
+      {{ if .CONSUL_AGENT }},
+      when: {
+        source: 'consul-agent',
+        once: 'healthy'
+      }{{ end }}
+    },
+    {
+      name: 'nginx',
+      port: 80,
+      interfaces: ['eth0'],
+      exec: 'nginx',
+      health: {
+        exec: 'health-check http',
+        interval: 10,
+        ttl: 25
+      },
+      when: {
+        source: 'preStart',
+        once: 'exitSuccess'
+      },
+      restarts: 'unlimited'
+    },
+    {
+      name: 'nginx-public',
+      port: 80,
+      interfaces: ['eth1', 'eth0'],
+      health: {
+        exec: 'health-check http',
+        interval: 10,
+        ttl: 25,
+      }
+    },
+    {{ if .ACME_DOMAIN }}
+    {
+      name: 'nginx-ssl',
+      port: 443,
+      interfaces: ['eth0'],
+      health: {
+        exec: 'acme init && health-check https',
+        interval: 10,
+        ttl: 25
+      }
+    },
+    {
+      name: 'nginx-public-ssl',
+      port: 443,
+      interfaces: ['eth0'],
+      health: {
+        exec: 'health-check https',
+        interval: 10,
+        ttl: 25,
+      }
+    },
+    {
+      name: 'nginx-public-ssl',
+      port: 443,
+      interfaces: ['eth1', 'eth0'],
+      health: {
+        exec: '/usr/bin/curl --insecure --fail --silent --show-error --output /dev/null --header \"HOST: {{ .ACME_DOMAIN }}\" https://localhost/nginx-health',
+        interval: 10,
+        ttl: 25
+      }
+    },
+    {
+      name: 'acme-watch',
+      exec: ['acme', 'watch'],
+      restarts: 'unlimited'
+    },
+    {
+      name: 'acme-checkin',
+      exec: ['acme', 'checkin'],
+      timeout: '10s',
+      when: {
+        interval: '1h',
+      }
+    },
+    {{ end }}
+    {
+      name: "onChange",
+      exec: "reload",
+      when: {
+        source: "watch.ghost",
+        each: "changed"
+      }
+    }
+    {{ if .CONSUL_AGENT }}
+    , {
+      name: 'consul-agent',
+      exec: ['/usr/local/bin/consul', 'agent',
+                  '-data-dir=/data',
+                  '-config-dir=/config',
+                  '-log-level=err',
+                  '-rejoin',
+                  '-retry-join', '{{ .CONSUL | default "consul" }}',
+                  '-retry-max', '10',
+                  '-retry-interval', '10s'],
+      health: {
+        exec: 'curl -so /dev/null http://localhost:8500',
+        interval: 10,
+        ttl: 25
+      },
+      restarts: 'unlimited'
+    }
+    {{ end }}
+  ],
+  watches: [
+    {
+      name: "ghost",
+      interval: 5
+    }
+  ]
+}

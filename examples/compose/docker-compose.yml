@@ -1,0 +1,62 @@
+version: '2.1'
+# Ghost demonstration of the Autopilot pattern
+
+services:
+  ghost:
+    build: ../../
+    mem_limit: 1g
+    restart: always
+    dns:
+      - 127.0.0.1
+    network_mode: bridge
+    expose:
+      - 2368
+    env_file: ../../_env
+    environment:
+      - CONSUL=consul
+    links:
+      - consul:consul
+
+  nginx:
+    build: ../../nginx
+    restart: always
+    dns:
+      - 127.0.0.1
+    network_mode: bridge
+    ports:
+      - 80:80
+      - 443:443
+      - 9090
+    environment:
+      - CONSUL=consul
+    links:
+      - consul:consul
+
+  mysql:
+    image: autopilotpattern/mysql:latest
+    mem_limit: 512m
+    restart: always
+    expose:
+      - 3306
+    network_mode: bridge
+    env_file: ../../_env
+    environment:
+      - CONSUL=consul
+    volumes:
+      - ../../tmp:/tmp/snapshots
+    links:
+      - consul:consul
+
+  # Start with a single host which will bootstrap the cluster.
+  # In production we'll want to use an HA cluster.
+  consul:
+    image: consul:0.8.4
+    command: >
+      agent -server -client=0.0.0.0 -dev -ui
+    restart: always
+    mem_limit: 128m
+    ports:
+      - 8500:8500
+    network_mode: bridge
+    dns:
+      - 127.0.0.1
