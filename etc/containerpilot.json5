@@ -9,7 +9,7 @@
       exec: 'node /bin/config-ghost.js preStart',
       when: {
         source: 'watch.mysql-primary',
-        each: 'changed'
+        each: 'healthy'
       }
     },
     {

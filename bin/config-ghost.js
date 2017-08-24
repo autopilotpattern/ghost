@@ -1,7 +1,7 @@
 'use strict';
 const Cp = require('child_process');
 const Consulite = require('consulite');
-const consulHost = `${process.env.CONSUL}:8500`;
+const consulHost = `${process.env.CONSUL_AGENT ? 'localhost' : process.env.CONSUL}:8500`;
 const debug = require('debug')('config-ghost');
 const isPreStart = process.argv[2] === 'preStart';
 const isOnChange = process.argv[2] === 'onChange';
