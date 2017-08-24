@@ -1,0 +1,35 @@
+{{ $host := env "DB_HOST" }}
+{{ $user := env "DB_USER" }}
+{{ $password := env "DB_PASSWORD" }}
+{{ $name := env "DB_NAME" }}
+
+{
+  "url": "http://localhost:2368",
+  "server": {
+    "port": "2368",
+    "host": "0.0.0.0"
+  },
+  "database": {
+    "client": "mysql",
+    "connection": {
+      "host": "{{$host}}",
+      "user": "{{$user}}",
+      "password": "{{$password}}",
+      "database": "{{$name}}",
+      "charset": "utf8"
+    }
+  },
+  "mail": {
+    "transport": "Direct"
+  },
+  "logging": {
+    "transports": [
+      "file",
+      "stdout"
+    ]
+  },
+  "process": "systemd",
+  "paths": {
+    "contentPath": "/var/lib/ghost/content"
+  }
+}

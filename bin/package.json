@@ -1,0 +1,13 @@
+{
+  "name": "config-ghost",
+  "version": "1.0.0",
+  "private": "true",
+  "dependencies": {
+    "belly-button": "4.x.x",
+    "consulite": "2.0.0",
+    "debug": "3.0.0"
+  },
+  "scripts": {
+    "lint": "belly-button"
+  }
+}
