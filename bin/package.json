@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "private": "true",
   "dependencies": {
-    "belly-button": "4.x.x",
+    "belly-button": "5.x.x",
     "consulite": "2.0.0",
-    "debug": "3.0.0"
+    "debug": "3.x.x"
   },
   "scripts": {
     "lint": "belly-button"
